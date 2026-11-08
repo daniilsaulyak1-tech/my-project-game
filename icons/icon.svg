@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="75%">
+      <stop offset="0" stop-color="#6a9bd8"/><stop offset=".55" stop-color="#4277bb"/><stop offset="1" stop-color="#2b5592"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <g transform="translate(36 196)">
+    <rect x="0" y="0" width="440" height="120" rx="14" fill="#fff" stroke="#151515" stroke-width="8"/>
+    <path d="M4 14 a10 10 0 0 1 10 -10 H50 V116 H14 a10 10 0 0 1 -10 -10 Z" fill="#1f55c4"/>
+    <rect x="12" y="24" width="30" height="10" fill="#0057b7" stroke="#fff" stroke-width="1.5"/>
+    <rect x="12" y="34" width="30" height="10" fill="#ffd700" stroke="#fff" stroke-width="1.5"/>
+    <text x="27" y="92" font-family="Arial Narrow, Arial, sans-serif" font-weight="700" font-size="22" fill="#fff" text-anchor="middle">UA</text>
+    <text x="72" y="89" font-family="Arial Narrow, Arial, sans-serif" font-weight="700" font-size="70" fill="#111" textLength="350" lengthAdjust="spacingAndGlyphs">АА 7777 АА</text>
+  </g>
+  <circle cx="400" cy="140" r="44" fill="#ffd25a" stroke="#a87a12" stroke-width="6"/>
+  <text x="400" y="160" font-family="Arial, sans-serif" font-weight="900" font-size="56" fill="#7a530a" text-anchor="middle">₴</text>
+</svg>
