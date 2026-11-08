@@ -79,12 +79,12 @@
   ];
 
   const LETTER_RULES = [
-    { id: 'quad',    name: 'чотири однакові літери', why: (r) => `регіон і серія — «${cyr(r)}»`,                 test: (r, s) => r[0] === r[1] && s === r, parts: ['reg', 'ser'] },
-    { id: 'lmirror', name: 'дзеркальні літери',      why: (r, s) => `«${cyr(r)}» ↔ «${cyr(s)}»`,                  test: (r, s) => s === r[1] + r[0],        parts: ['reg', 'ser'] },
-    { id: 'lrepeat', name: 'серія = регіон',         why: (r) => `«${cyr(r)}» на початку і в кінці`,             test: (r, s) => s === r,                  parts: ['reg', 'ser'] },
-    { id: 'l2pairs', name: 'дві пари літер',         why: (r, s) => `«${cyr(r)}» і «${cyr(s)}»`,                  test: (r, s) => r[0] === r[1] && s[0] === s[1], parts: ['reg', 'ser'] },
-    { id: 'ldouble', name: 'однакові літери серії',  why: (r, s) => `серія «${cyr(s)}»`,                          test: (r, s) => s[0] === s[1],            parts: ['ser'] },
-    { id: 'lgold',   name: '«золотий» регіон',       why: (r) => `код регіону «${cyr(r)}» з однакових літер`,     test: (r) => r[0] === r[1],               parts: ['reg'] },
+    { id: 'quad',    name: 'чотири однакові літери', why: (r) => `регіон і серія — «${cyr(r)}»`,              test: (r, s) => r[0] === r[1] && s === r,       parts: ['reg', 'ser'] },
+    { id: 'lmirror', name: 'дзеркальні літери',      why: (r, s) => `«${cyr(r)}» ↔ «${cyr(s)}»`,               test: (r, s) => s === r[1] + r[0],              parts: ['reg', 'ser'] },
+    { id: 'lrepeat', name: 'серія = регіон',         why: (r) => `«${cyr(r)}» на початку і в кінці`,          test: (r, s) => s === r,                        parts: ['reg', 'ser'] },
+    { id: 'l2pairs', name: 'дві пари літер',         why: (r, s) => `«${cyr(r)}» і «${cyr(s)}»`,               test: (r, s) => r[0] === r[1] && s[0] === s[1], parts: ['reg', 'ser'] },
+    { id: 'ldouble', name: 'однакові літери серії',  why: (r, s) => `серія «${cyr(s)}»`,                       test: (r, s) => s[0] === s[1],                  parts: ['ser'] },
+    { id: 'lgold',   name: '«золотий» регіон',       why: (r) => `код регіону «${cyr(r)}» з однакових літер`,  test: (r) => r[0] === r[1],                     parts: ['reg'] },
   ];
 
   const DIGIT_TOTAL = 9999;                     // 0001…9999 (0000 не видають)
@@ -105,19 +105,17 @@
     LETTER_RULES.forEach((x) => { x.odds = LETTER_TOTAL / (lc[x.id] || 1); });
   })();
 
+  // mult — у скільки разів номер цієї рідкості дорожчий за свій шанс
   const TIERS = [
-    { id: 'common', min: 0,      name: 'Звичайний' },
-    { id: 'nice',   min: 10,     name: 'Цікавий' },
-    { id: 'rare',   min: 100,    name: 'Рідкісний' },
-    { id: 'epic',   min: 1000,   name: 'Епічний' },
-    { id: 'legend', min: 10000,  name: 'Легендарний' },
-    { id: 'myth',   min: 100000, name: 'Міфічний' },
+    { id: 'common', min: 0,      name: 'Звичайний',   mult: 1 },
+    { id: 'nice',   min: 10,     name: 'Цікавий',     mult: 1 },
+    { id: 'rare',   min: 100,    name: 'Рідкісний',   mult: 1 },
+    { id: 'epic',   min: 1000,   name: 'Епічний',     mult: 2 },
+    { id: 'legend', min: 30000,  name: 'Легендарний', mult: 5 },
+    { id: 'myth',   min: 500000, name: 'Міфічний',    mult: 20 },
   ];
-  const TIER_BY_ID = Object.fromEntries(TIERS.map((t) => [t.id, t]));
-  const COLLECT_MIN = 100;        // з «Рідкісного» — у скриню
-  const INCOME_RATE = 0.004;      // номер у колекції приносить 0,4 % ціни за секунду
-  const FINDER_BONUS = 0.1;       // 10 % ціни одразу на рахунок за знахідку
-  const LOCK_MS = { rare: 450, epic: 900, legend: 1400, myth: 2000 };
+  const COLLECT_MIN = 100;                 // з «Рідкісного» — гроші та скриня
+  const SPACE_TIERS = ['epic', 'legend', 'myth'];
 
   const tierFor = (n) => TIERS.reduce((acc, t) => (n >= t.min ? t : acc), TIERS[0]);
 
@@ -134,14 +132,37 @@
     let odds = 1;
     if (dRule) {
       odds *= dRule.odds;
-      parts.push({ kind: 'digits', label: `Цифри «${n}»`, name: dRule.name, why: dRule.why(n), odds: dRule.odds, hl: ['num'] });
+      parts.push({ label: `Цифри «${n}»`, name: dRule.name, why: dRule.why(n), odds: dRule.odds, hl: ['num'] });
     }
     if (lRule) {
       odds *= lRule.odds;
-      parts.push({ kind: 'letters', label: `Літери «${cyr(r)}…${cyr(s)}»`, name: lRule.name, why: lRule.why(r, s), odds: lRule.odds, hl: lRule.parts });
+      parts.push({ label: `Літери «${cyr(r)}…${cyr(s)}»`, name: lRule.name, why: lRule.why(r, s), odds: lRule.odds, hl: lRule.parts });
     }
     const tier = tierFor(odds);
-    return { r, n, s, odds, tier, parts, price: niceRound(odds) };
+    return { r, n, s, odds, tier, parts, price: niceRound(odds * tier.mult) };
+  }
+
+  // З чого складається сума: кожен рядок пояснення додає свою частину.
+  function breakdown(p) {
+    const lines = [];
+    let sum = 0;
+    p.parts.forEach((part) => {
+      const amount = niceRound(part.odds);
+      lines.push({ text: `${part.label} — ${part.name}: ${part.why}. Шанс ${oddsText(part.odds)}`, amount });
+      sum += amount;
+    });
+    if (p.parts.length > 1) {
+      const base = niceRound(p.odds);
+      const extra = p.tier.mult > 1 ? niceRound(base - sum) : base - sum;
+      lines.push({ text: `Разом комбінація: ${oddsText(p.odds)} — рідше, ніж кожна частина окремо`, amount: extra });
+      sum += extra;
+    }
+    if (p.tier.mult > 1) {
+      lines.push({ text: `Бонус рідкості «${p.tier.name}» ×${p.tier.mult}`, amount: p.price - sum });
+      sum = p.price;
+    }
+    if (sum !== p.price) lines[lines.length - 1].amount += p.price - sum;
+    return lines;
   }
 
   const rnd = (k) => Math.floor(Math.random() * k);
@@ -164,12 +185,10 @@
     found: 0,
     sold: 0,
     best: null,           // {r,n,s,odds}
-    clickLvl: 0,
     luckLvl: 0,
     collection: [],       // {id,r,n,s,odds,price,t}
     profile: { name: '', surname: '', age: '', avatar: '' },
     sound: true,
-    lastSeen: 0,
   };
 
   function load() {
@@ -177,22 +196,24 @@
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return;
       const s = JSON.parse(raw);
-      Object.assign(state, s);
+      ['balance', 'earned', 'taps', 'found', 'sold', 'best', 'luckLvl', 'collection', 'sound'].forEach((k) => {
+        if (s[k] !== undefined) state[k] = s[k];
+      });
       state.profile = Object.assign({ name: '', surname: '', age: '', avatar: '' }, s.profile || {});
       if (!Array.isArray(state.collection)) state.collection = [];
+      // перерахувати ціни за новими правилами
+      state.collection.forEach((it) => {
+        const ev = evaluate(it.r, it.n, it.s);
+        it.odds = ev.odds;
+        it.price = ev.price;
+      });
     } catch (e) { /* немає сховища — граємо без збереження */ }
   }
   function save() {
-    state.lastSeen = Date.now();
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
   }
 
-  const clickPower = () => 1 + state.clickLvl;
   const rollsPerTap = () => 1 + state.luckLvl;
-  let incomeCache = 0;
-  const recalcIncome = () => {
-    incomeCache = state.collection.reduce((a, it) => a + it.price, 0) * INCOME_RATE;
-  };
 
   /* =========================================================
    *  ФОРМАТУВАННЯ
@@ -207,7 +228,6 @@
     if (x >= 1e7) return nf1.format(x / 1e6) + ' млн';
     return nf.format(x);
   }
-  const rate = (x) => (x < 10 ? nf1.format(x) : money(x));
   const oddsText = (o) => '1 з ' + money(Math.round(o));
   const plateText = (p) => `${cyr(p.r)} ${p.n} ${cyr(p.s)}`;
 
@@ -217,12 +237,16 @@
 
   const $ = (id) => document.getElementById(id);
   const plateEl = $('plate');
+  const plateWrap = $('plateWrap');
+  const plateZone = $('plateZone');
   const balanceEl = $('balance');
-  const incomeEl = $('income');
   const walletEl = $('wallet');
   const regionEl = $('region');
   const findEl = $('find');
   const bannerEl = $('banner');
+  const gainEl = $('gain');
+  const continueEl = $('continue');
+  const spaceEl = $('space');
   const hintEl = $('hint');
   const chestBtn = $('chestBtn');
   const chestBadge = $('chestBadge');
@@ -259,19 +283,47 @@
     el.classList.add(cls);
   }
 
-  function floatText(text, x, y) {
-    const f = document.createElement('div');
-    f.className = 'float';
-    f.textContent = text;
-    f.style.left = x + 'px';
-    f.style.top = y + 'px';
-    f.style.transform = 'translate(-50%, -50%)';
-    document.body.appendChild(f);
-    setTimeout(() => f.remove(), 850);
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  /* ---------- ефекти ---------- */
+
+  function tapFx(x, y) {
+    const r = document.createElement('div');
+    r.className = 'ripple';
+    r.style.left = x + 'px';
+    r.style.top = y + 'px';
+    document.body.appendChild(r);
+    setTimeout(() => r.remove(), 500);
+    for (let i = 0; i < 6; i++) {
+      const s = document.createElement('div');
+      s.className = 'spark';
+      document.body.appendChild(s);
+      const a = Math.random() * Math.PI * 2;
+      const d = 22 + Math.random() * 30;
+      const anim = s.animate([
+        { transform: `translate(${x}px, ${y}px) scale(1)`, opacity: 1 },
+        { transform: `translate(${x + Math.cos(a) * d}px, ${y + Math.sin(a) * d}px) scale(.2)`, opacity: 0 },
+      ], { duration: 380 + Math.random() * 120, easing: 'cubic-bezier(.2,.7,.4,1)', fill: 'forwards' });
+      anim.onfinish = () => s.remove();
+    }
   }
 
-  function coinBurst(count) {
-    const from = plateEl.getBoundingClientRect();
+  function plateFlip() {
+    plateEl.animate([
+      { transform: 'perspective(700px) rotateX(48deg) scale(.95)' },
+      { transform: 'perspective(700px) rotateX(-6deg) scale(1.01)', offset: 0.7 },
+      { transform: 'none' },
+    ], { duration: 220, easing: 'ease-out' });
+    plateEl.querySelectorAll('.plate-text span').forEach((sp, i) => {
+      sp.animate([
+        { transform: 'translateY(-35%)', opacity: 0.2 },
+        { transform: 'none', opacity: 1 },
+      ], { duration: 170, delay: i * 35, easing: 'cubic-bezier(.2,.8,.3,1.2)', fill: 'backwards' });
+    });
+  }
+
+  function coinBurst(count, fromEl) {
+    const from = (fromEl || plateEl).getBoundingClientRect();
     const to = walletEl.getBoundingClientRect();
     const tx = to.left + 40, ty = to.top + to.height / 2;
     for (let i = 0; i < count; i++) {
@@ -281,28 +333,32 @@
       document.body.appendChild(c);
       const sx = from.left + from.width * (0.2 + Math.random() * 0.6);
       const sy = from.top + from.height / 2;
-      const mx = sx + (Math.random() - 0.5) * 160;
-      const my = sy - 40 - Math.random() * 90;
+      const mx = sx + (Math.random() - 0.5) * 180;
+      const my = sy - 40 - Math.random() * 100;
       const anim = c.animate([
-        { transform: `translate(${sx}px, ${sy}px) scale(.4)`, opacity: 0 },
-        { transform: `translate(${mx}px, ${my}px) scale(1.1)`, opacity: 1, offset: 0.35 },
-        { transform: `translate(${tx}px, ${ty}px) scale(.6)`, opacity: 0.9 },
+        { transform: `translate(${sx}px, ${sy}px) scale(.4) rotate(0deg)`, opacity: 0 },
+        { transform: `translate(${mx}px, ${my}px) scale(1.15) rotate(180deg)`, opacity: 1, offset: 0.35 },
+        { transform: `translate(${tx}px, ${ty}px) scale(.6) rotate(360deg)`, opacity: 0.9 },
       ], { duration: 750 + Math.random() * 350, delay: i * 35, easing: 'cubic-bezier(.3,.7,.4,1)', fill: 'both' });
       anim.onfinish = () => c.remove();
     }
     setTimeout(() => restartAnim(walletEl, 'pulse'), 800);
   }
 
-  function countUp(el, to, ms) {
-    const start = performance.now();
-    const step = (now) => {
-      const k = Math.min(1, (now - start) / ms);
-      const e = 1 - Math.pow(1 - k, 3);
-      el.textContent = money(to * e);
-      if (k < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }
+  (function makeStars() {
+    const box = $('stars');
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < 140; i++) {
+      const s = document.createElement('i');
+      s.className = 'star';
+      const size = Math.random() < 0.85 ? 1 + Math.random() * 1.5 : 2.5 + Math.random() * 1.5;
+      s.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 100}%;width:${size}px;height:${size}px;` +
+        `animation-duration:${2 + Math.random() * 4}s;animation-delay:${-Math.random() * 5}s;` +
+        (Math.random() < 0.12 ? 'background:#ffe6a8;' : Math.random() < 0.12 ? 'background:#a8d4ff;' : '');
+      frag.appendChild(s);
+    }
+    box.appendChild(frag);
+  })();
 
   /* =========================================================
    *  ЗВУК (WebAudio, без файлів)
@@ -330,22 +386,210 @@
     const seqs = {
       nice: [660, 880],
       rare: [523, 659, 784],
-      epic: [523, 659, 784, 1047],
-      legend: [523, 659, 784, 1047, 1319],
-      myth: [392, 523, 659, 784, 1047, 1319, 1568],
+      epic: [392, 523, 659, 784, 1047],
+      legend: [392, 523, 659, 784, 1047, 1319],
+      myth: [262, 392, 523, 659, 784, 1047, 1319, 1568],
     };
-    (seqs[tierId] || []).forEach((f, i) => beep(f, 0.22, 'triangle', 0.06, i * 0.09));
+    if (SPACE_TIERS.includes(tierId)) beep(110, 1.6, 'sine', 0.07);
+    (seqs[tierId] || []).forEach((f, i) => beep(f, 0.25, 'triangle', 0.06, i * 0.1));
   }
+  const sfxLine = (i) => beep(880 + i * 140, 0.12, 'sine', 0.05);
   const vibrate = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { /* ignore */ } };
+
+  /* =========================================================
+   *  РАХУНОК: гроші нараховуються, коли пояснення дописане
+   * ========================================================= */
+
+  let hold = 0;              // зароблено, але ще «летить» у рахунок
+  function credit(x) {
+    state.balance += x;
+    state.earned += x;
+    hold += x;
+  }
+  function release(x) {
+    hold = Math.max(0, hold - x);
+  }
+
+  let shown = 0;
+  let lastFrame = performance.now();
+  let lastBalanceText = '';
+  function frame(now) {
+    const dt = Math.min(1, (now - lastFrame) / 1000);
+    lastFrame = now;
+    const target = state.balance - hold;
+    const diff = target - shown;
+    shown = Math.abs(diff) < 1 ? target : shown + diff * Math.min(1, dt * 6);
+    const txt = money(shown);
+    if (txt !== lastBalanceText) { balanceEl.textContent = txt; lastBalanceText = txt; }
+    requestAnimationFrame(frame);
+  }
+
+  /* =========================================================
+   *  ПОЯСНЕННЯ, ЩО ДРУКУЄТЬСЯ + СУМА, ЩО НАКОПИЧУЄТЬСЯ
+   * ========================================================= */
+
+  let seq = null;
+
+  function runFind(p, opts) {
+    if (seq && !seq.finished) seq.finish();
+
+    const money_ = opts.money;
+    const lines = money_
+      ? breakdown(p)
+      : p.parts.map((part) => ({ text: `${part.label} — ${part.name}: ${part.why}. Шанс ${oddsText(part.odds)}`, amount: 0 }));
+    const total = lines.reduce((a, l) => a + l.amount, 0);
+
+    findEl.className = 'find show tier-' + p.tier.id;
+    findEl.innerHTML =
+      `<div class="find-head"><span class="badge">${p.tier.name}</span><span class="find-plate">${plateText(p)}</span></div>` +
+      (money_ ? `<div class="find-sum"><span>Нараховано за номер</span><b class="psum">+0 ₴</b></div>` : '') +
+      `<ul class="find-reasons"></ul><div class="find-note" hidden></div>`;
+    const ul = findEl.querySelector('.find-reasons');
+    const psum = findEl.querySelector('.psum');
+    const note = findEl.querySelector('.find-note');
+    note.textContent = opts.note;
+
+    const sumEls = [psum, opts.space ? gainEl : null].filter(Boolean);
+    const setSum = (v) => sumEls.forEach((el) => { el.textContent = '+' + money(v) + ' ₴'; });
+    setSum(0);
+
+    const rows = lines.map(() => {
+      const li = document.createElement('li');
+      li.innerHTML = '<span class="t"></span>' + (money_ ? '<b class="amt"></b>' : '');
+      return li;
+    });
+
+    const me = { finished: false };
+    seq = me;
+    let counted = 0;
+
+    function showAmount(i) {
+      const amt = rows[i].querySelector('.amt');
+      if (!amt) return;
+      amt.textContent = '+' + money(lines[i].amount) + ' ₴';
+      amt.classList.add('show');
+    }
+    function countTo(to, ms) {
+      const from = counted;
+      counted = to;
+      const start = performance.now();
+      const step = (now) => {
+        if (me.finished) return;
+        const k = Math.min(1, (now - start) / ms);
+        setSum(from + (to - from) * (1 - Math.pow(1 - k, 3)));
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+      sumEls.forEach((el) => restartAnim(el, 'bump'));
+    }
+
+    me.finish = () => {
+      if (me.finished) return;
+      me.finished = true;
+      rows.forEach((li, i) => {
+        if (!li.isConnected) ul.appendChild(li);
+        li.classList.remove('typing');
+        li.querySelector('.t').textContent = lines[i].text;
+        showAmount(i);
+      });
+      setSum(total);
+      note.hidden = false;
+      if (opts.onDone) opts.onDone();
+    };
+
+    (async () => {
+      const speed = opts.space ? 16 : 6;
+      for (let i = 0; i < rows.length; i++) {
+        if (me.finished) return;
+        const li = rows[i];
+        const t = li.querySelector('.t');
+        li.classList.add('typing');
+        ul.appendChild(li);
+        const text = lines[i].text;
+        for (let c = 1; c <= text.length; c++) {
+          if (me.finished) return;
+          t.textContent = text.slice(0, c);
+          await sleep(speed);
+        }
+        if (me.finished) return;
+        li.classList.remove('typing');
+        if (money_) {
+          showAmount(i);
+          countTo(counted + lines[i].amount, opts.space ? 520 : 320);
+          sfxLine(i);
+        }
+        await sleep(opts.space ? 380 : 120);
+      }
+      if (me.finished) return;
+      await sleep(money_ ? 420 : 0);
+      me.finish();
+    })();
+  }
+
+  /* =========================================================
+   *  КОСМОС для рідкостей вище «Рідкісного»
+   * ========================================================= */
+
+  let spaceOn = false;
+  let spaceStart = 0;
+  let spaceDoneAt = 0;
+  let spaceItem = null;
+
+  function enterSpace(p) {
+    spaceOn = true;
+    spaceStart = performance.now();
+    spaceDoneAt = 0;
+    setTierClass(spaceEl, p.tier.id);
+    setTierClass(plateZone, p.tier.id);
+    continueEl.classList.remove('show');
+    document.body.classList.add('space');
+  }
+
+  function exitSpace() {
+    if (!spaceOn) return;
+    spaceOn = false;
+    document.body.classList.remove('space');
+    continueEl.classList.remove('show');
+    setTierClass(plateZone, null);
+    const p = spaceItem;
+    spaceItem = null;
+    if (p) {
+      release(p.price);
+      coinBurst(Math.min(30, 10 + Math.round(Math.log10(p.odds) * 3)));
+      setTimeout(() => restartAnim(chestBtn, 'chest-shake'), 600);
+    }
+    lockUntil = performance.now() + 250;
+    swallowClickUntil = performance.now() + 450;
+  }
+
+  // щоб дотик, який закрив космос, не натиснув кнопку під ним
+  let swallowClickUntil = 0;
+  document.addEventListener('click', (e) => {
+    if (performance.now() < swallowClickUntil) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+
+  // поки триває космос — будь-який дотик керує ним, а не грою
+  document.addEventListener('pointerdown', (e) => {
+    if (!spaceOn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const now = performance.now();
+    if (seq && !seq.finished) {
+      if (now - spaceStart > 1800) seq.finish();
+      return;
+    }
+    if (now - spaceDoneAt > 500) exitSpace();
+  }, true);
 
   /* =========================================================
    *  ГОЛОВНА МЕХАНІКА: КЛІК ПО НОМЕРУ
    * ========================================================= */
 
-  let current = null;
   let lockUntil = 0;
 
+  let forced = null;     // для перевірки: plateGame.force('AA', '7777', 'AA')
   function roll() {
+    if (forced) { const p = evaluate(...forced); forced = null; return p; }
     let best = null;
     for (let i = 0; i < rollsPerTap(); i++) {
       const p = randomPlate();
@@ -356,27 +600,25 @@
 
   function tap(x, y) {
     const now = performance.now();
-    if (now < lockUntil) return;
+    if (spaceOn || now < lockUntil) return;
+    if (seq && !seq.finished) seq.finish();
 
     hintEl.classList.add('hide');
     state.taps++;
-    const power = clickPower();
-    addMoney(power);
-    floatText('+' + power, x, y);
+    tapFx(x, y);
     sfxTap();
 
     const p = roll();
-    current = p;
     fillPlate(plateEl, p);
     regionEl.textContent = `${cyr(p.r)} — ${REGION_NAME[p.r]}`;
     plateEl.classList.remove('glow', 'soft');
     plateEl.querySelectorAll('.hl').forEach((s) => s.classList.remove('hl'));
     setTierClass(plateEl, null);
-    restartAnim(plateEl, 'bump');
+    plateFlip();
     findEl.classList.add('old');
 
     if (p.odds >= COLLECT_MIN) onRare(p);
-    else if (p.odds >= TIER_BY_ID.nice.min) onNice(p);
+    else if (p.odds >= TIERS[1].min) onNice(p);
   }
 
   function highlight(p, soft) {
@@ -387,65 +629,49 @@
   }
 
   function onNice(p) {
-    const bonus = Math.max(2, Math.round(p.odds / 3)) * clickPower();
-    addMoney(bonus);
     highlight(p, true);
-    renderFind(p, { collected: false, bonus });
+    runFind(p, { money: false, note: 'Без нагороди: гроші дають номери від «Рідкісного» (шанс 1 з 100 і рідше)' });
     sfxFind('nice');
   }
 
   function onRare(p) {
-    const item = {
+    state.collection.push({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       r: p.r, n: p.n, s: p.s, odds: p.odds, price: p.price, t: Date.now(),
-    };
-    state.collection.push(item);
+    });
     state.found++;
     if (!state.best || p.odds > state.best.odds) state.best = { r: p.r, n: p.n, s: p.s, odds: p.odds };
-    recalcIncome();
-
-    const bonus = Math.round(p.price * FINDER_BONUS);
-    addMoney(bonus);
+    credit(p.price);
+    updateChestBadge();
+    save();
 
     highlight(p, false);
-    renderFind(p, { collected: true, bonus });
-    showBanner(p.tier);
-    coinBurst(Math.min(26, 6 + Math.round(Math.log10(p.odds) * 4)));
-    updateChestBadge();
-    setTimeout(() => restartAnim(chestBtn, 'chest-shake'), 500);
-    sfxFind(p.tier.id);
-    vibrate(p.tier.id === 'rare' ? 40 : [40, 50, 90]);
-    lockUntil = performance.now() + (LOCK_MS[p.tier.id] || 400);
-    save();
-  }
-
-  function showBanner(tier) {
-    bannerEl.textContent = tier.name + '!';
-    setTierClass(bannerEl, tier.id);
+    bannerEl.textContent = p.tier.name + '!';
+    setTierClass(bannerEl, p.tier.id);
     restartAnim(bannerEl, 'show');
-  }
+    sfxFind(p.tier.id);
+    const note = `📦 Номер додано в скриню — його можна зберегти або продати за ${money(p.price)} ₴`;
 
-  function renderFind(p, { collected, bonus }) {
-    findEl.className = 'find show tier-' + p.tier.id;
-    const reasons = p.parts.map((part) =>
-      `<li><b>${part.label}</b> — ${part.name}: ${part.why}. <i>Шанс ${oddsText(part.odds)}</i></li>`
-    ).join('');
-    const combo = p.parts.length > 1
-      ? `<div class="find-total">Разом комбінація: ${oddsText(p.odds)} — рідше за кожну частину окремо!</div>`
-      : `<div class="find-total">Рідкість комбінації: ${oddsText(p.odds)}</div>`;
-    const note = collected
-      ? `📦 Номер у скрині · приносить +${rate(p.price * INCOME_RATE)} ₴/с · +${money(bonus)} ₴ за знахідку`
-      : `+${money(bonus)} ₴ на рахунок · у скриню йдуть номери від «Рідкісного» (1 з 100)`;
-    findEl.innerHTML =
-      `<div class="find-head"><span class="badge">${p.tier.name}</span><span class="find-plate">${plateText(p)}</span></div>` +
-      `<div class="find-price"><span>${collected ? 'Ціна номера' : 'Бонус'}</span><b><span class="cnt">0</span> ₴</b></div>` +
-      `<ul class="find-reasons">${reasons}</ul>${combo}<div class="find-note">${note}</div>`;
-    countUp(findEl.querySelector('.cnt'), collected ? p.price : bonus, collected ? 1100 : 500);
-  }
-
-  function addMoney(x) {
-    state.balance += x;
-    state.earned += x;
+    if (SPACE_TIERS.includes(p.tier.id)) {
+      vibrate([60, 60, 120, 60, 200]);
+      spaceItem = p;
+      enterSpace(p);
+      runFind(p, {
+        money: true, space: true, note,
+        onDone: () => { spaceDoneAt = performance.now(); continueEl.classList.add('show'); },
+      });
+    } else {
+      vibrate(40);
+      lockUntil = performance.now() + 500;
+      runFind(p, {
+        money: true, note,
+        onDone: () => {
+          release(p.price);
+          coinBurst(Math.min(16, 6 + Math.round(Math.log10(p.odds) * 2)));
+          setTimeout(() => restartAnim(chestBtn, 'chest-shake'), 600);
+        },
+      });
+    }
   }
 
   plateEl.addEventListener('pointerdown', (e) => {
@@ -456,39 +682,20 @@
   plateEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
+      if (spaceOn) { if (seq && !seq.finished) seq.finish(); else exitSpace(); return; }
       const r = plateEl.getBoundingClientRect();
-      tap(r.left + r.width / 2, r.top + r.height / 3);
+      tap(r.left + r.width / 2, r.top + r.height / 2);
     }
   });
   plateEl.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  /* =========================================================
-   *  ВЕРХНІЙ РЯДОК, ЦИКЛ, ПАСИВНИЙ ДОХІД
-   * ========================================================= */
-
-  let shown = 0;
-  let lastFrame = performance.now();
-  let lastBalanceText = '';
-  function frame(now) {
-    const dt = Math.min(1, (now - lastFrame) / 1000);
-    lastFrame = now;
-    if (incomeCache > 0) addMoney(incomeCache * dt);
-    const diff = state.balance - shown;
-    shown = Math.abs(diff) < 1 ? state.balance : shown + diff * Math.min(1, dt * 7);
-    const txt = money(shown);
-    if (txt !== lastBalanceText) { balanceEl.textContent = txt; lastBalanceText = txt; }
-    requestAnimationFrame(frame);
-  }
-
   function renderTop() {
-    incomeEl.textContent = `+${rate(incomeCache)} ₴/с`;
-    tapinfoEl.textContent = `+${clickPower()} ₴ за клік` + (state.luckLvl ? ` · удача ×${rollsPerTap()}` : '');
+    tapinfoEl.textContent = state.luckLvl ? `🍀 Удача: ${rollsPerTap()} номерів за клік` : '';
   }
   function updateChestBadge() {
     const n = state.collection.length;
     chestBadge.hidden = n === 0;
     chestBadge.textContent = n > 99 ? '99+' : String(n);
-    renderTop();
   }
 
   /* =========================================================
@@ -515,6 +722,8 @@
     $('avatarName').textContent = state.profile.name.trim() || 'Профіль';
   }
 
+  const stat = (v, l) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`;
+
   let draftAvatar = '';
   function openProfile() {
     const p = state.profile;
@@ -524,15 +733,13 @@
     $('fAge').value = p.age;
     $('fSound').checked = state.sound;
     paintAvatar($('profileAvatar'), p);
-    const best = state.best ? `${plateText(state.best)}` : '—';
     $('profileStats').innerHTML =
       stat(money(state.taps), 'кліків') +
       stat(money(state.found), 'рідкісних знайдено') +
       stat(money(state.earned) + ' ₴', 'зароблено всього') +
-      stat(best, 'найкраща знахідка');
+      stat(state.best ? plateText(state.best) : '—', 'найкраща знахідка');
     openModal('profileModal');
   }
-  const stat = (v, l) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`;
 
   $('photoInput').addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
@@ -598,26 +805,27 @@
     else list.sort((a, b) => b.t - a.t);
 
     const total = list.reduce((a, it) => a + it.price, 0);
+    const rarest = list.reduce((a, it) => Math.max(a, it.odds), 0);
     $('chestStats').innerHTML =
       stat(money(list.length), 'номерів') +
       stat(money(total) + ' ₴', 'вартість') +
-      stat('+' + rate(incomeCache) + ' ₴/с', 'дохід');
+      stat(rarest ? '1 з ' + (rarest >= 1e5 ? nf1.format(rarest / 1e6) + ' млн' : money(Math.round(rarest))) : '—', 'найрідкісніший');
 
     const box = $('chestList');
     if (!list.length) {
-      box.innerHTML = '<div class="chest-empty">Скриня поки порожня.<br>Клікай по номеру — рідкісні знаки (від «1 з 100») потраплять сюди автоматично.<br><br>Номери в колекції щосекунди приносять гроші, а ще їх можна продати за повну ціну.</div>';
+      box.innerHTML = '<div class="chest-empty">Скриня поки порожня.<br>Клікай по номеру — рідкісні знаки (від «1 з 100») потраплять сюди автоматично.<br><br>Їх можна зберігати в колекції або продати за повну ціну.</div>';
       return;
     }
-    box.innerHTML = list.map((it) => {
+    box.innerHTML = list.map((it, i) => {
       const ev = evaluate(it.r, it.n, it.s);
       const why = ev.parts.map((x) => x.name).join(' + ');
       const isConfirm = confirmId === it.id;
-      return `<div class="item tier-${ev.tier.id}">` +
+      return `<div class="item tier-${ev.tier.id}" style="animation-delay:${Math.min(i, 12) * 30}ms">` +
         plateHTML(it, ev.tier.id) +
         `<div class="item-info">` +
           `<div class="item-top"><span class="badge">${ev.tier.name}</span><span>${oddsText(it.odds)} · ${REGION_NAME[it.r]}</span></div>` +
           `<div class="item-why">${why}</div>` +
-          `<div class="item-price">Ціна: <b>${money(it.price)} ₴</b> <span>· +${rate(it.price * INCOME_RATE)} ₴/с</span></div>` +
+          `<div class="item-price">Ціна: <b>${money(it.price)} ₴</b></div>` +
         `</div>` +
         `<button class="btn small sell${isConfirm ? ' confirm' : ''}" data-sell="${it.id}">${isConfirm ? 'Точно?' : 'Продати'}</button>` +
         `</div>`;
@@ -645,7 +853,6 @@
     const [it] = state.collection.splice(idx, 1);
     state.balance += it.price;
     state.sold++;
-    recalcIncome();
     updateChestBadge();
     renderChest();
     restartAnim(walletEl, 'pulse');
@@ -666,33 +873,27 @@
    * ========================================================= */
 
   const LUCK_MAX = 6;
-  const clickCost = () => Math.round(25 * Math.pow(1.6, state.clickLvl));
-  const luckCost = () => Math.round(400 * Math.pow(3.2, state.luckLvl));
+  const luckCost = () => Math.round(500 * Math.pow(3.5, state.luckLvl));
 
   function renderShop() {
     const lMax = state.luckLvl >= LUCK_MAX;
+    const tierRows = TIERS.slice(1).map((t) =>
+      `<div class="tier-row tier-${t.id}"><span class="badge">${t.name}</span><span>шанс від 1 з ${money(t.min)}` +
+      (t.id === 'nice' ? ' · без нагороди' : t.mult > 1 ? ` · ціна ×${t.mult}` : '') + `</span></div>`).join('');
     $('shopList').innerHTML =
-      `<div class="upg"><h3>💪 Сила кліку</h3><span class="lvl">Рівень ${state.clickLvl} · зараз +${clickPower()} ₴ за клік</span>` +
-        `<p>Кожен клік по номеру дає на 1 ₴ більше.</p>` +
-        `<button class="btn small" data-buy="click" ${state.balance < clickCost() ? 'disabled' : ''}>${money(clickCost())} ₴</button></div>` +
       `<div class="upg"><h3>🍀 Удача</h3><span class="lvl">Рівень ${state.luckLvl}/${LUCK_MAX} · ${rollsPerTap()} ${rollsPerTap() === 1 ? 'номер' : 'номери'} за клік</span>` +
         `<p>Кожен клік перебирає більше номерів і показує найрідкісніший.</p>` +
         `<button class="btn small" data-buy="luck" ${lMax || state.balance < luckCost() ? 'disabled' : ''}>${lMax ? 'Макс.' : money(luckCost()) + ' ₴'}</button></div>` +
-      `<p class="shop-note">Рідкість: Цікавий — від 1 з 10, Рідкісний — 1 з 100, Епічний — 1 з 1 000, Легендарний — 1 з 10 000, Міфічний — 1 з 100 000. Ціна номера ≈ його рідкості.</p>`;
+      `<div class="tiers"><h3>Рідкості</h3>${tierRows}</div>`;
   }
   function updateShopButtons() {
-    const c = $('shopList').querySelector('[data-buy="click"]');
     const l = $('shopList').querySelector('[data-buy="luck"]');
-    if (c) c.disabled = state.balance < clickCost();
     if (l) l.disabled = state.luckLvl >= LUCK_MAX || state.balance < luckCost();
   }
   $('shopList').addEventListener('click', (e) => {
     const b = e.target.closest('[data-buy]');
     if (!b || b.disabled) return;
-    if (b.dataset.buy === 'click' && state.balance >= clickCost()) {
-      state.balance -= clickCost();
-      state.clickLvl++;
-    } else if (b.dataset.buy === 'luck' && state.luckLvl < LUCK_MAX && state.balance >= luckCost()) {
+    if (b.dataset.buy === 'luck' && state.luckLvl < LUCK_MAX && state.balance >= luckCost()) {
       state.balance -= luckCost();
       state.luckLvl++;
     } else return;
@@ -733,22 +934,11 @@
    * ========================================================= */
 
   load();
-  recalcIncome();
-
-  // дохід колекції, поки гри не було (до 2 годин)
-  if (state.lastSeen && incomeCache > 0) {
-    const away = Math.min(7200, Math.max(0, (Date.now() - state.lastSeen) / 1000));
-    const got = incomeCache * away;
-    if (got >= 1) {
-      addMoney(got);
-      setTimeout(() => toast(`Поки тебе не було, колекція заробила ${money(got)} ₴`), 600);
-    }
-  }
   shown = state.balance;
 
-  current = randomPlate();
-  fillPlate(plateEl, current);
-  regionEl.textContent = `${cyr(current.r)} — ${REGION_NAME[current.r]}`;
+  const first = randomPlate();
+  fillPlate(plateEl, first);
+  regionEl.textContent = `${cyr(first.r)} — ${REGION_NAME[first.r]}`;
   if (state.taps > 0) hintEl.classList.add('hide');
 
   renderAvatar();
@@ -761,5 +951,5 @@
   window.addEventListener('pagehide', save);
 
   // для тестів у консолі
-  window.plateGame = { state, evaluate, DIGIT_RULES, LETTER_RULES };
+  window.plateGame = { state, evaluate, breakdown, DIGIT_RULES, LETTER_RULES, TIERS, force: (r, n, s) => { forced = [r, n, s]; } };
 })();
